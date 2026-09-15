@@ -7,23 +7,25 @@ export const getAllNotes = async (req, res) => {
 
   const skip = (page - 1) * perPage;
 
-  const filter = {
-    userId: req.user._id,
-  };
+  const notesQuery = Note.find().where('userId').equals(req.user._id);
 
   if (tag) {
-    filter.tag = tag;
+    notesQuery.where('tag').equals(tag);
   }
 
   if (search) {
-    filter.$or = [
-      { title: { $regex: search, $options: 'i' } },
-      { content: { $regex: search, $options: 'i' } },
-    ];
+    notesQuery.where({
+      $or: [
+        { title: { $regex: search, $options: 'i' } },
+        { content: { $regex: search, $options: 'i' } },
+      ],
+    });
   }
 
+  const filter = notesQuery.getFilter();
+
   const [notes, totalNotes] = await Promise.all([
-    Note.find(filter).skip(skip).limit(perPage),
+    notesQuery.skip(skip).limit(perPage),
     Note.countDocuments(filter),
   ]);
 
@@ -95,5 +97,6 @@ export const deleteNote = async (req, res) => {
   if (!note) {
     throw createHttpError(404, 'Note not found');
   }
-res.status(200).json(note);
+
+  res.status(200).json(note);
 };
